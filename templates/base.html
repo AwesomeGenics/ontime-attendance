@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>{% block title %}OnTime — Bunk & Attendance Tracker{% endblock %}</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0a0e14" id="theme-color-meta" />
+  <meta name="description" content="Track your attendance, calculate your bunks, and never get debarred." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OnTime" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/static/css/app.css" />
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+  <!-- Mobile App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-wrapper">
+        <a href="/home" class="brand-stamp" title="OnTime Bunk Tracker">O</a>
+        <div class="brand-text-block">
+          <a href="/home" class="brand-title">OnTime</a>
+          <span class="brand-edition">Bunk Tracker</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Install PWA button -->
+        <button id="header-install-btn" class="icon-btn-ledger" style="display: none;" onclick="promptPWAInstall()" title="Install app on phone">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button id="theme-toggle-btn" class="icon-btn-ledger" title="Switch dark/light mode">
+          <svg id="theme-icon-light" viewBox="0 0 24 24" style="display: block;">
+            <circle cx="12" cy="12" r="5"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg id="theme-icon-dark" viewBox="0 0 24 24" style="display: none;">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+
+        {% if session.get('uname') %}
+        <!-- Desktop Add Subject button -->
+        <button class="desktop-add-btn icon-btn-ledger" onclick="openModal('add-course-drawer')" title="Add subject" style="color: var(--accent-stamp);">
+          <svg viewBox="0 0 24 24">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+
+        <!-- User Tag -->
+        <div class="user-badge-ledger" title="Logged in as {{ session.get('uname') }}">
+          @<strong>{{ session.get('uname') }}</strong>
+        </div>
+
+        <!-- Logout button -->
+        <button class="icon-btn-ledger" onclick="confirmLogout()" title="Log out">
+          <svg viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+          </svg>
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- Flash Alerts -->
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="toast-container" style="margin-top: 14px;">
+      {% for message in messages %}
+      <div class="alert-ledger-banner alert-ledger-danger">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>{{ message }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Main View -->
+  {% block body %}{% endblock %}
+
+  {% if session.get('uname') %}
+  <!-- Drawer: Add Subject -->
+  <div id="add-course-drawer" class="modal-backdrop">
+    <div class="drawer-surface">
+      <div class="drawer-head">
+        <h2 class="drawer-title">Add a Subject</h2>
+        <button class="drawer-dismiss" onclick="closeModal('add-course-drawer')">
+          <svg viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form action="/add" method="post" id="add-course-form">
+        <div class="input-ledger-group">
+          <label class="input-ledger-label" for="course-modal-input">Subject Name (or that 8 AM lecture you hate)</label>
+          <input 
+            type="text" 
+            id="course-modal-input" 
+            name="subject" 
+            class="text-input-ledger" 
+            placeholder="e.g. Maths, Operating Systems, 8 AM Lab" 
+            required 
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="suggestions-ledger-title">Quick presets:</div>
+        <div class="chips-ledger-row">
+          <button type="button" class="chip-ledger" onclick="fillSubjectChip('Maths')">Maths</button>
+          <button type="button" class="chip-ledger" onclick="fillSubjectChip('Operating Systems')">OS</button>
+          <button type="button" class="chip-ledger" onclick="fillSubjectChip('Data Structures')">DSA</button>
+          <button type="button" class="chip-ledger" onclick="fillSubjectChip('Database Eng')">DBMS</button>
+          <button type="button" class="chip-ledger" onclick="fillSubjectChip('Computer Networks')">Networks</button>
+          <button type="button" class="chip-ledger" onclick="fillSubjectChip('8 AM Lab')">8 AM Lab</button>
+        </div>
+
+        <button type="submit" class="btn-ledger-block">
+          Add to Tracker
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Subject Modal -->
+  <div id="delete-confirm-modal" class="modal-backdrop">
+    <div class="drawer-surface" style="text-align: center;">
+      <div style="width: 44px; height: 44px; background: var(--standing-deficit-bg); border: 1px solid var(--standing-deficit-border); color: var(--standing-deficit); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; border-radius: var(--radius-xs);">
+        <svg viewBox="0 0 24 24" style="width: 22px; height: 22px; stroke: currentColor; stroke-width: 2.2; fill: none;">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+      </div>
+      <h3 style="font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; margin-bottom: 8px;">Drop this subject?</h3>
+      <p style="font-size: 0.88rem; color: var(--text-sub); margin-bottom: 22px; line-height: 1.45;">
+        Bro are you sure? Deleting <strong id="delete-course-title" style="color: var(--text-ink);"></strong> will erase all the attendance you tracked for it.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button type="button" class="btn-record" style="background: var(--bg-subtle); border-color: var(--border-ledger); color: var(--text-sub);" onclick="closeModal('delete-confirm-modal')">
+          Nevermind
+        </button>
+        <button type="button" class="btn-record btn-record-absent" onclick="executePendingDelete()">
+          Yeah, drop it
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout Modal -->
+  <div id="logout-confirm-modal" class="modal-backdrop">
+    <div class="drawer-surface" style="text-align: center;">
+      <h3 style="font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; margin-bottom: 8px;">Logging out already?</h3>
+      <p style="font-size: 0.88rem; color: var(--text-sub); margin-bottom: 22px;">
+        Don't forget to mark your attendance after tomorrow's lecture bro.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button type="button" class="btn-record" style="background: var(--bg-subtle); border-color: var(--border-ledger); color: var(--text-sub);" onclick="closeModal('logout-confirm-modal')">
+          Stay
+        </button>
+        <a href="/logout" class="btn-record btn-record-absent" style="text-decoration: none;">
+          Log out
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Benchmark Goal Modal -->
+  <div id="target-goal-modal" class="modal-backdrop">
+    <div class="drawer-surface">
+      <div class="drawer-head">
+        <h2 class="drawer-title">Attendance Target</h2>
+        <button class="drawer-dismiss" onclick="closeModal('target-goal-modal')">
+          <svg viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <p style="font-size: 0.84rem; color: var(--text-sub); margin-bottom: 16px; line-height: 1.45;">
+        What percentage does your college demand before they debar you from exams? The bunk calculator uses this!
+      </p>
+
+      <div class="input-ledger-group">
+        <label class="input-ledger-label" for="target-goal-input">Minimum Attendance Required (%)</label>
+        <input type="number" id="target-goal-input" class="text-input-ledger" min="1" max="100" value="75" />
+      </div>
+
+      <div class="chips-ledger-row">
+        <button type="button" class="chip-ledger" onclick="document.getElementById('target-goal-input').value=75">75% (The usual)</button>
+        <button type="button" class="chip-ledger" onclick="document.getElementById('target-goal-input').value=80">80% (Strict profs)</button>
+        <button type="button" class="chip-ledger" onclick="document.getElementById('target-goal-input').value=85">85% (Pain)</button>
+        <button type="button" class="chip-ledger" onclick="document.getElementById('target-goal-input').value=65">65% (Chill college)</button>
+      </div>
+
+      <button type="button" class="btn-ledger-block" onclick="saveNewGoal()">
+        Save Target
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Dock -->
+  <nav class="bottom-dock">
+    <div class="dock-container">
+      <a href="/home" class="dock-link active">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+          <line x1="10" y1="4" x2="10" y2="22"/>
+        </svg>
+        <span>Tracker</span>
+      </a>
+
+      <button class="dock-add-btn" onclick="openModal('add-course-drawer')">
+        <svg viewBox="0 0 24 24">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span> Add Subject</span>
+      </button>
+
+      <button class="dock-link" onclick="openModal('target-goal-modal')">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="4"/>
+        </svg>
+        <span>Target: <span class="target-goal-display">75%</span></span>
+      </button>
+    </div>
+  </nav>
+  {% endif %}
+
+  <!-- PWA Install Notice -->
+  <div id="pwa-install-banner" class="pwa-banner" style="display: none;">
+    <div class="pwa-banner-content">
+      <img src="/static/icons/icon-192.png" alt="OnTime" class="pwa-banner-icon" />
+      <div class="pwa-banner-text">
+        <span class="pwa-banner-title">Install OnTime App</span>
+        <span class="pwa-banner-desc">Add to your home screen so you can log bunks right after class</span>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button class="btn-pwa-install" onclick="promptPWAInstall()">Install</button>
+      <button class="btn-pwa-dismiss" onclick="dismissPWABanner()" title="Dismiss">✕</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Semester Attendance | OnTime{% endblock %}
+
+{% block body %}
+<main class="main-wrapper">
+
+  <!-- Overview Summary Card -->
+  <section class="ledger-hero">
+    <div class="ledger-hero-masthead">
+      <h1 class="ledger-hero-title">Semester Attendance</h1>
+      <span class="ledger-hero-meta">Attendance Stats</span>
+    </div>
+
+    <!-- Asymmetric Standing Section -->
+    <div class="ledger-standing-row">
+      <div class="standing-primary-metric">
+        <div class="standing-score-block">
+          <span class="standing-label">Overall Attendance</span>
+          <div id="ledger-hero-pct" class="standing-number safe">0.0%</div>
+        </div>
+        <div id="ledger-hero-badge" class="standing-badge safe">NO DATA YET</div>
+      </div>
+    </div>
+
+    <!-- Continuous Tally Tape -->
+    <div class="ledger-tally-tape">
+      <div class="tally-cell">
+        <span class="tally-caption">Classes Held</span>
+        <span id="ledger-total-sessions" class="tally-digit">0</span>
+      </div>
+      <div class="tally-cell">
+        <span class="tally-caption">Attended</span>
+        <span id="ledger-total-attended" class="tally-digit" style="color: var(--standing-safe);">0</span>
+      </div>
+      <div class="tally-cell">
+        <span class="tally-caption">Bunked</span>
+        <span id="ledger-total-cuts" class="tally-digit" style="color: var(--standing-deficit);">0</span>
+      </div>
+    </div>
+
+    <!-- Benchmark Rule Bar -->
+    <div class="benchmark-line">
+      <span>COLLEGE MINIMUM: <strong class="target-goal-display">75%</strong></span>
+      <span class="benchmark-trigger" onclick="openModal('target-goal-modal')">
+        Change Target
+        <svg viewBox="0 0 24 24" style="width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.5; fill: none;">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </span>
+    </div>
+  </section>
+
+  <!-- Controls: Search & Filters -->
+  {% if data and data|length > 0 %}
+  <section class="ledger-controls">
+    <div class="search-field-wrapper">
+      <svg viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input 
+        type="search" 
+        id="course-search" 
+        class="search-input-ledger" 
+        placeholder="Search subjects..." 
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="filter-row">
+      <button class="filter-ledger-btn active" data-filter="all">All Subjects ({{ data|length }})</button>
+      <button class="filter-ledger-btn" data-filter="danger">Cooked (< <span class="target-goal-display">75%</span>)</button>
+      <button class="filter-ledger-btn" data-filter="safe">Safe (≥ <span class="target-goal-display">75%</span>)</button>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Course Entries Roster -->
+  <section class="course-list" id="course-roster">
+    {% if data and data|length > 0 %}
+      {% for id, sub, aten, total in data %}
+      <article 
+        class="course-entry" 
+        data-id="{{ id }}" 
+        data-subject="{{ sub }}" 
+        data-attended="{{ aten }}" 
+        data-total="{{ total }}"
+      >
+        <!-- Course Header -->
+        <div class="course-entry-head">
+          <div class="course-name-block">
+            <span class="course-initials">{{ sub[:3]|upper }}</span>
+            <h2 class="course-title" title="{{ sub }}">{{ sub }}</h2>
+          </div>
+
+          <div class="course-score-badge">
+            <div class="course-pct-number">--%</div>
+          </div>
+        </div>
+
+        <!-- Ratio Bar -->
+        <div class="tally-ratio-row">
+          <span>{{ aten }} of {{ total }} attended</span>
+          <span>{{ total - aten }} bunked</span>
+        </div>
+
+        <div class="ratio-meter-track">
+          <div class="ratio-meter-fill" style="width: 0%;"></div>
+        </div>
+
+        <!-- Student Advisor Callout -->
+        <div class="advisor-ledger-strip neutral">
+          <span class="advisor-text">Checking attendance status...</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="course-actions-grid">
+          <a href="/atnd/{{ id }}" class="btn-record btn-record-present" title="Mark Attended (+1)">
+            <svg viewBox="0 0 24 24">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>+ Attended</span>
+          </a>
+
+          <a href="/absnt/{{ id }}" class="btn-record btn-record-absent" title="Mark Bunked / Missed (-1)">
+            <svg viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>− Bunked</span>
+          </a>
+
+          <button 
+            type="button" 
+            class="btn-entry-delete" 
+            onclick="confirmDeleteCourse('{{ id }}', '{{ sub|e }}')" 
+            title="Drop Subject"
+          >
+            <svg viewBox="0 0 24 24">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      </article>
+      {% endfor %}
+
+      <div id="filter-empty-state" class="empty-ledger-block" style="display: none; padding: 28px 16px;">
+        <p class="empty-ledger-copy">No subjects found for this search.</p>
+      </div>
+
+    {% else %}
+      <!-- Empty State -->
+      <div class="empty-ledger-block">
+        <div class="empty-stamp-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <h2 class="empty-ledger-heading">No subjects added yet</h2>
+        <p class="empty-ledger-copy">
+          Add your subjects so you know exactly how many lectures you can skip without getting debarred.
+        </p>
+        <button class="btn-stamp-action" onclick="openModal('add-course-drawer')">
+          + Add First Subject
+        </button>
+      </div>
+    {% endif %}
+  </section>
+
+</main>
+{% endblock %}
