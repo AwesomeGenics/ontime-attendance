@@ -114,7 +114,7 @@ cd attendance-tracker
 ### 2. Install Dependencies
 Ensure the required packages are present in your environment:
 ```bash
-pip install flask flask-session werkzeug pillow
+pip install -r requirements.txt
 ```
 
 ### 3. Initialize and Run the Application
